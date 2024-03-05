@@ -15,6 +15,28 @@ from .regmap import RegisterMap
 from pathlib import Path
 import wavedrom
 
+############## Wavedrom parameters ##############
+config.wavedrom = {}
+# setting for wavedrom: how many bits per string?
+config.wavedrom['bits_per_lane'] = 8
+# setting for wavedrom to cut long names
+# for fine tuning please take into account 'fontfamily', 'fontstyle', and 'fontsize' to optimal appearence
+config.wavedrom['field_name_len_cut'] = 20
+config.wavedrom['print_reset'] = True
+config.wavedrom['fontfamily']  = "Barlow Light"
+config.wavedrom['fontweight']  = "normal"
+config.wavedrom['fontstyle']   = "normal"
+config.wavedrom['fontsize']    = 10
+config.wavedrom['vspace']      = 80
+config.wavedrom['hspace']      = 640
+config.wavedrom['vflip']       = False
+config.wavedrom['hflip']       = False
+### Wavedrom params supported only in fork:   ###
+### https://github.com/iDoka/wavedrompy       ###
+# For PDF best results with 'opacity' = True
+config.wavedrom['opacity']     = True
+config.wavedrom['notch']       = False
+#################################################
 
 class Generator():
     """Base generator class.
@@ -99,12 +121,36 @@ class Wavedrom():
 
     def draw_regs(self, imgdir, rmap):
         imgdir.mkdir(exist_ok=True)
-
-        bits = config.globcfg['data_width']
-        lanes = bits // 16 if bits > 16 else 1
+        bits_per_lane      = config.wavedrom['bits_per_lane']
+        field_name_len_cut = config.wavedrom['field_name_len_cut']
+        opacity            = config.wavedrom['opacity']
+        notch              = config.wavedrom['notch']
+        print_reset        = config.wavedrom['print_reset']
+        fontfamily         = config.wavedrom['fontfamily']
+        fontweight         = config.wavedrom['fontweight']
+        fontstyle          = config.wavedrom['fontstyle']
+        fontsize           = config.wavedrom['fontsize']
+        vspace             = config.wavedrom['vspace']
+        hspace             = config.wavedrom['hspace']
+        vflip              = config.wavedrom['vflip']
+        hflip              = config.wavedrom['hflip']
+        bits               = config.globcfg['data_width']
+        lanes = bits // bits_per_lane if bits > bits_per_lane else 1
         for reg in rmap:
             reg_wd = {"reg": [],
-                      "config": {"bits": bits, "lanes": lanes, "fontsize": 10}}
+                      "config": {
+                          "bits": bits,
+                          "lanes": lanes,
+                          "opacity": opacity,
+                          "notch": notch,
+                          "fontfamily": fontfamily,
+                          "fontweight": fontweight,
+                          "fontsize": fontsize,
+                          "vspace": vspace,
+                          "hspace": hspace,
+                          "vflip": vflip,
+                          "hflip": hflip
+                      }}
             bit_pos = -1
             for bf in reg:
                 if bit_pos == -1 and bf.lsb > 0:
@@ -112,7 +158,7 @@ class Wavedrom():
                 elif bf.lsb - bit_pos > 1:
                     reg_wd["reg"].append({"bits": bf.lsb - bit_pos - 1})
                 name = bf.name
-                name_max_len = 5 * bf.width
+                name_max_len = field_name_len_cut * bf.width
                 if len(bf.name) > name_max_len:  # to prevent labels overlapping
                     name = bf.name[:name_max_len - 1] + '..'
                 reg_wd["reg"].append({"name": name, "attr": bf.access, "bits": bf.width})
