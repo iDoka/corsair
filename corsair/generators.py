@@ -14,7 +14,7 @@ from . import config
 from .regmap import RegisterMap
 from pathlib import Path
 import wavedrom
-
+import datetime
 
 class Generator():
     """Base generator class.
@@ -68,12 +68,17 @@ class Jinja2():
         :param templates_path: Path to search templates. If no path provided, then internal templates will be used
         :return: String with rendered text
         """
+        # the current date and time in a specific format
+        now = datetime.datetime.now()
+        #datetimestamp = now.strftime("Automatic generated @ %d-%b-%Y %H:%M:%S")
+        datetimestamp = now.strftime("%d-%b-%Y %H:%M:%S")
+        year = now.strftime("%Y")
         # prepare template
         if not templates_path:
             templates_path = str(Path(__file__).parent / 'templates')
         j2_env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=templates_path),
                                     trim_blocks=True, lstrip_blocks=True)
-        j2_env.globals.update(zip=zip)
+        j2_env.globals.update(zip=zip, datetimestamp=datetimestamp, year=year)
         j2_template = j2_env.get_template(template)
         # render
         return j2_template.render(vars)
