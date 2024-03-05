@@ -1,0 +1,140 @@
+{#- Many thanks to github.com/EgorVorontsov for providing base for this template #}
+
+{#- MACRO #}
+{#- bit field range #}
+{% macro range(bf) %}
+    {% if bf.width == 1 %}
+{{ bf.msb }}
+    {%- else %}
+{{ bf.msb }}:{{ bf.lsb }}
+    {%- endif %}
+{%- endmacro %}
+
+{#- bit field mode #}
+{% macro mode(bf) %}
+{{ bf.access }}
+{%- endmacro %}
+
+{#- value in hex format #}
+{% macro literal(initial, width) %}
+{{ "0x%0{w}x".format(w=width // 4) % initial }}
+{%- endmacro %}
+
+{#- TEMPLATE NAMESPACE #}
+{% set tmp = namespace() %}
+
+{#- set variables #}
+{% set warning = "WARNING: The Register Map is preliminary. Please use it as an initial info only." %}
+
+{#- TEMPLATE #}
+
+{#- INCLUDE FILES #}
+{% include 'corsair_banner.j2' %}
+
+
+// Use this string to include it on top level:
+// include::<>_regs.adoc[leveloffset=+1]
+
+
+[[reg-map]]
+== {{ title }}
+
+ifeval::["{backend}" == "pdf"]
+:reg_map_image_dir: {{ image_dir }}
+endif::[]
+
+// notice for DRAFT only
+ifndef::draft[]
+ifeval::["{docstatus}" == "draft"]
+{{ warning }}
+endif::[]
+endif::[]
+
+// another check for DRAFT status to display notice
+ifdef::draft[{{ warning }}]
+
+
+{% if print_conventions %}
+
+//.Access mode conventions
+.Access mode explanation:
+[#table-Register_access_modes,cols="5s,20", options="header",width=50%,align=left]
+|==========================
+^| Access mode ^| Description
+| RW            | Read and Write
+| RW1C          | Read and Write 1 to Clear
+| RW1S          | Read and Write 1 to Set
+| RO            | Read Only
+| ROC           | Read Only to Clear
+| ROLL          | Read Only / Latch Low
+| ROLH          | Read Only / Latch High
+| WO            | Write only
+| WOSC          | Write Only / Self Clear
+| RC            | Clear by reading
+|==========================
+{% endif %}
+
+[[reg-map-summary]]
+=== Register map summary
+
+ifdef::use-reg-map-glossary[NOTE: Register names' abbreviations have based on module and/or function names. Please refer <<reg-map-acronims,glossary>> for explanation.]
+
+*Base address*: `{{ "0x%08x" % config['base_address'] }}`
+
+.Register map summary
+[#table-Register_map,cols="^4m,6,20", options="header"]
+|==========================
+^| Offset ^| Name ^| Description
+{% for reg in rmap %}
+{{ "| %-10s | %-24s | %s" % (literal(reg.address, config['address_width']), "<<%s>>" % (reg.name),  reg.description) }}
+{% endfor %}
+|==========================
+
+
+[[reg-map-list]]
+=== Registers list
+
+{% for reg in rmap %}
+
+[[{{ reg.name }}]]
+[preface]
+==== {{ reg.name }}
+
+[cols="2s,10", frame=none, grid=none]
+|===
+| Offset      m| {{ literal(reg.address, config['address_width']) }}
+| Reset       m| {{ literal(reg.reset, config['data_width']) }}
+| Description a| {{ reg.description }}
+|===
+
+
+{% if print_images %}
+[[image-{{ reg.name.lower() }}]]
+image::{reg_map_image_dir}/{{ reg.name.lower()}}.svg[{{ reg.name.lower()}}]
+{% endif %}
+
+.{{ reg.name }} Register's Fields
+[#table-{{ reg.name.lower() }},cols="^2,5,12,^2,^3m", options="header"]
+|==========================
+^| Bits ^| Name  ^| Description ^| Type ^| Reset
+{% for bf in reg.bitfields[::-1] %}
+{{ "| %-6s | %-16s  | %s | %-15s | %-10s" % (range(bf), bf.name, bf.description, mode(bf).upper(), literal(bf.reset, bf.width)) }}
+{% endfor %}
+|==========================
+
+{% for bf in reg %}
+    {% if bf.enums %}
+
+.Enumerated values for `{{ bf.name }}`
+[#table-{{ reg.name.lower() }}-{{ bf.name.lower() }}-enum,cols="1,1,1", options="header"]
+|==========================
+^| Name ^| Bits ^| Description
+            {% for enum in bf %}
+{{ "| %-16s | %-6s | %s" % (enum.name, literal(enum.value, bf.width), enum.description) }}
+            {% endfor %}
+|==========================
+    {% endif %}
+{% endfor %}
+
+{#- Back to  <<register_map_summary>> #}
+{% endfor %}
