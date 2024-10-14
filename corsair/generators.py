@@ -268,6 +268,7 @@ class Verilog(Generator, Jinja2):
         # prepare jinja2
         j2_template = self.template
         j2_vars = {}
+        j2_vars['templatename'] = j2_template
         j2_vars['corsair_ver'] = __version__
         j2_vars['rmap'] = self.rmap
         j2_vars['module_name'] = utils.get_file_name(self.path)
